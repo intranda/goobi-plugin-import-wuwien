@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
 
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -33,8 +34,12 @@ import org.goobi.production.plugin.interfaces.IPlugin;
 import org.goobi.production.properties.ImportProperty;
 
 import de.intranda.goobi.plugins.util.Config;
+import de.intranda.goobi.plugins.util.ImportProcessData;
+import de.intranda.goobi.plugins.util.MetadataMappingObject;
 import de.sub.goobi.config.ConfigPlugins;
+import de.sub.goobi.config.ConfigurationHelper;
 import de.sub.goobi.forms.MassImportForm;
+import de.sub.goobi.helper.UghHelper;
 import de.sub.goobi.helper.exceptions.ImportPluginException;
 import lombok.Data;
 import lombok.extern.log4j.Log4j;
@@ -59,9 +64,6 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
 
     private Config config;
 
-    private Map<String, Integer> headerOrder;
-
-
     public EndnoteExcelImport() {
         importTypes.add(ImportType.FILE);
     }
@@ -77,9 +79,19 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
     public Fileformat convertData() throws ImportPluginException {
         return null;
     }
+
     @Override
     public List<ImportObject> generateFiles(List<Record> records) {
         List<ImportObject> answer = new ArrayList<>();
+
+        /*
+         * Suche nach existierenden Vorgängen in Goobi
+         * Öffnen der mets datei oder neuen vorgang erstellen
+         *  suche nach issue
+         * erstellen des neuen issues oder nutzen von existierendem
+         * hinzufügen von article
+         * 
+         */
 
         //        for (Record record : records) {
         //            ImportObject io = new ImportObject();
@@ -321,17 +333,25 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
         return answer;
     }
 
+    public static void main(String[] args) {
+        EndnoteExcelImport eei = new EndnoteExcelImport();
+        eei.setWorkflowTitle("*");
+        eei.getConfig();
+        eei.setFile(new File("/home/robert/Downloads/POP_EndNote_Library_Liste_fuer_BIB_zsArt_1.xlsx"));
+        List<Record> records = eei.generateRecordsFromFile();
+        System.out.println(records.size());
+    }
+
 
     @Override
     public List<Record> generateRecordsFromFile() {
-
+        Map<String, ImportProcessData> metadataFromExcelfile = new HashMap<>();
         if (StringUtils.isBlank(workflowTitle)) {
             workflowTitle = form.getTemplate().getTitel();
         }
 
         List<Record> recordList = new ArrayList<>();
-        String idColumn = getConfig().getIdentifierHeaderName();
-        headerOrder = new HashMap<>();
+        Map<Integer, String> headerOrder = new HashMap<>();
 
         InputStream fileInputStream = null;
         try {
@@ -353,20 +373,19 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
                 if (cell != null) {
                     cell.setCellType(CellType.STRING);
                     String value = cell.getStringCellValue();
-                    headerOrder.put(value, i);
+                    headerOrder.put(i, value);
                 }
             }
 
             while (rowIterator.hasNext()) {
-                Map<Integer, String> map = new HashMap<>();
+                Map<String, String> map = new HashMap<>();
                 Row row = rowIterator.next();
                 int lastColumn = row.getLastCellNum();
                 if (lastColumn == -1) {
                     continue;
                 }
                 for (int cn = 0; cn < lastColumn; cn++) {
-                    //                while (cellIterator.hasNext()) {
-                    //                    Cell cell = cellIterator.next();
+
                     Cell cell = row.getCell(cn, MissingCellPolicy.CREATE_NULL_AS_BLANK);
                     String value = "";
                     switch (cell.getCellTypeEnum()) {
@@ -374,7 +393,6 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
                             value = cell.getBooleanCellValue() ? "true" : "false";
                             break;
                         case FORMULA:
-                            //                            value = cell.getCellFormula();
                             value = cell.getRichStringCellValue().getString();
                             break;
                         case NUMERIC:
@@ -388,17 +406,103 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
                             value = "";
                             break;
                     }
-                    map.put(cn, value);
-
+                    map.put(headerOrder.get(cn), value);
                 }
+                // create process title based on rule
+                String rule = config.getProcessTitleRule();
+                StringBuilder generatedTitle = new StringBuilder();
+                StringTokenizer tokenizer = new StringTokenizer(rule, "+");
 
-                // just add the record if the conditional column contains a value
+                while (tokenizer.hasMoreTokens()) {
+                    String namepart = tokenizer.nextToken();
+                    /*
+                     * wenn der String mit ' anfängt und mit ' endet, dann den Inhalt so übernehmen
+                     */
+                    if (namepart.startsWith("'") && namepart.endsWith("'")) {
+                        generatedTitle.append(namepart.substring(1, namepart.length() - 1));
+                    } else {
+                        if ("TSL".equals(namepart)) {
+                            String title = map.get("Publication Title");
+                            String author = null;
+                            generatedTitle.append(createAtstsl(title, author));
+                        } else if ("ATS".equals(namepart)) {
+                            String title = map.get("Publication Title");
+                            String author = map.get("Author");
+                            generatedTitle.append(createAtstsl(title, author));
+                        } else {
+                            String metadataValue = map.get(namepart);
+                            if (StringUtils.isNotBlank(metadataValue)) {
+                                generatedTitle.append(metadataValue);
+                            }
+                        }
+                    }
+                }
+                String newTitle = generatedTitle.toString();
+                if (newTitle.endsWith("_")) {
+                    newTitle = newTitle.substring(0, newTitle.length() - 1);
+                }
+                // remove non-ascii characters for the sake of TIFF header limits
+                String regex = ConfigurationHelper.getInstance().getProcessTitleReplacementRegex();
 
+                String filteredTitle = newTitle.replaceAll(regex, "");
+
+                /*
+                 * 1. Vorgangstitel bilden
+                 * 2. prüfen, ob titel bereits in Liste vorhanden ist
+                 * 3. issue + article in liste hinzufügen oder neuer vorgang, issue + article erstellen
+                 * 
+                 */
+                ImportProcessData data = null;
+                if (metadataFromExcelfile.containsKey(filteredTitle)) {
+                    data = metadataFromExcelfile.get(filteredTitle);
+                } else {
+                    data = new ImportProcessData();
+                    data.setProcessTitle(filteredTitle);
+                    metadataFromExcelfile.put(filteredTitle, data);
+                    // anchor and volume data
+                    for (MetadataMappingObject mmo : config.getMetadataList()) {
+                        String metadataValue = map.get(mmo.getHeaderName());
+                        if ("anchor".equals(mmo.getDocType())) {
+                            data.getAnchorMetadata().put(mmo.getRulesetName(), metadataValue);
+                        } else if ("volume".equals(mmo.getDocType())) {
+                            data.getVolumeMetadata().put(mmo.getRulesetName(), metadataValue);
+                        }
+                    }
+                }
+                List<Map<String, String>> articleData = null;
+                if (StringUtils.isBlank(map.get("Issue"))) {
+                    data.setCreateIssue(false);
+                    if (data.getArticleMetadata().get("0") == null) {
+                        articleData = new ArrayList<>();
+                        data.getArticleMetadata().put("0", articleData);
+                    } else {
+                        articleData = data.getArticleMetadata().get("0");
+                    }
+                } else {
+                    data.setCreateIssue(true);
+                    if (data.getArticleMetadata().get(map.get("Issue")) == null) {
+                        articleData = new ArrayList<>();
+                        data.getArticleMetadata().put(map.get("Issue"), articleData);
+                    } else {
+                        articleData = data.getArticleMetadata().get(map.get("Issue"));
+                    }
+                }
+                // TODO only doctype child
+                Map<String, String> articleMetadata = new HashMap<>();
+                for (MetadataMappingObject mmo : config.getMetadataList()) {
+                    String metadataValue = map.get(mmo.getHeaderName());
+                    if (StringUtils.isBlank(mmo.getDocType()) || "child".equals(mmo.getDocType())) {
+                        articleMetadata.put(mmo.getPropertyName(), metadataValue);
+                    }
+                }
+                articleData.add(articleMetadata);
+
+            }
+            for (ImportProcessData ipd : metadataFromExcelfile.values()) {
                 Record r = new Record();
-                r.setId(map.get(headerOrder.get(idColumn)));
-                r.setObject(map);
+                r.setId(ipd.getProcessTitle());
+                r.setObject(ipd);
                 recordList.add(r);
-
             }
 
         } catch (Exception e) {
@@ -415,6 +519,7 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
 
         return recordList;
     }
+
     @Override
     public List<Record> splitRecords(String records) {
         return null;
@@ -513,5 +618,34 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
         Config config = new Config(myconfig);
 
         return config;
+    }
+
+    private String createAtstsl(String title, String author) {
+        StringBuilder result = new StringBuilder(8);
+        if (author != null && author.trim().length() > 0) {
+            result.append(author.length() > 4 ? author.substring(0, 4) : author);
+            result.append(title.length() > 4 ? title.substring(0, 4) : title);
+        } else {
+            StringTokenizer titleWords = new StringTokenizer(title);
+            int wordNo = 1;
+            while (titleWords.hasMoreTokens() && wordNo < 5) {
+                String word = titleWords.nextToken();
+                switch (wordNo) {
+                    case 1:
+                        result.append(word.length() > 4 ? word.substring(0, 4) : word);
+                        break;
+                    case 2:
+                    case 3:
+                        result.append(word.length() > 2 ? word.substring(0, 2) : word);
+                        break;
+                    case 4:
+                        result.append(word.length() > 1 ? word.substring(0, 1) : word);
+                        break;
+                }
+                wordNo++;
+            }
+        }
+        String res = UghHelper.convertUmlaut(result.toString()).toLowerCase();
+        return res.replaceAll("[\\W]", ""); // delete umlauts etc.
     }
 }

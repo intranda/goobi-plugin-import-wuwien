@@ -19,6 +19,8 @@ public class Config {
     private String identifierHeaderName;
     private String publicationTypeColumnName;
 
+    private String processTitleRule;
+
     /**
      * loads the &lt;config&gt; block from xml file
      * 
@@ -32,6 +34,8 @@ public class Config {
         identifierColumn = xmlConfig.getInt("/identifierColumn", 1);
         identifierHeaderName = xmlConfig.getString("/identifierHeaderName", null);
         publicationTypeColumnName = xmlConfig.getString("/publicationType", null);
+
+        processTitleRule = xmlConfig.getString("/processTitleGeneration", null);
 
         @SuppressWarnings("unchecked")
         List<HierarchicalConfiguration> mml = xmlConfig.configurationsAt("//metadata");
