@@ -9,7 +9,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.StringTokenizer;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.configuration.SubnodeConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -24,6 +28,8 @@ import org.apache.poi.ss.usermodel.Row.MissingCellPolicy;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.goobi.beans.Process;
+import org.goobi.production.enums.ImportReturnValue;
 import org.goobi.production.enums.ImportType;
 import org.goobi.production.enums.PluginType;
 import org.goobi.production.importer.DocstructElement;
@@ -39,13 +45,31 @@ import de.intranda.goobi.plugins.util.MetadataMappingObject;
 import de.sub.goobi.config.ConfigPlugins;
 import de.sub.goobi.config.ConfigurationHelper;
 import de.sub.goobi.forms.MassImportForm;
+import de.sub.goobi.helper.Helper;
 import de.sub.goobi.helper.UghHelper;
+import de.sub.goobi.helper.exceptions.DAOException;
 import de.sub.goobi.helper.exceptions.ImportPluginException;
+import de.sub.goobi.helper.exceptions.SwapException;
+import de.sub.goobi.persistence.managers.ProcessManager;
 import lombok.Data;
 import lombok.extern.log4j.Log4j;
 import net.xeoh.plugins.base.annotations.PluginImplementation;
+import ugh.dl.DigitalDocument;
+import ugh.dl.DocStruct;
+import ugh.dl.DocStructType;
 import ugh.dl.Fileformat;
+import ugh.dl.Metadata;
+import ugh.dl.Person;
 import ugh.dl.Prefs;
+import ugh.exceptions.DocStructHasNoTypeException;
+import ugh.exceptions.MetadataTypeNotAllowedException;
+import ugh.exceptions.PreferencesException;
+import ugh.exceptions.ReadException;
+import ugh.exceptions.TypeNotAllowedAsChildException;
+import ugh.exceptions.TypeNotAllowedForParentException;
+import ugh.exceptions.UGHException;
+import ugh.exceptions.WriteException;
+import ugh.fileformats.mets.MetsMods;
 
 @Data
 @PluginImplementation
@@ -63,6 +87,9 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
     private String workflowTitle;
 
     private Config config;
+
+    private int numberOfNewRecords;
+    private int numberOfUpdatedRecords;
 
     public EndnoteExcelImport() {
         importTypes.add(ImportType.FILE);
@@ -93,244 +120,274 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
          * 
          */
 
-        //        for (Record record : records) {
-        //            ImportObject io = new ImportObject();
+        for (Record record : records) {
+            String processTitle = record.getId();
+            ImportProcessData ipd = (ImportProcessData) record.getObject();
 
-        //            try {
-        //
-        //                Object tempObject = record.getObject();
-        //                Map<Integer, String> rowMap = (Map<Integer, String>) tempObject;
-        //
-        //                // generate a mets file
-        //                DigitalDocument digitalDocument = null;
-        //                Fileformat ff = null;
-        //                DocStruct logical = null;
-        //                DocStruct anchor = null;
-        // TODO
+            // check if process already exists
+            Process process = ProcessManager.getProcessByExactTitle(processTitle);
+            if (process == null) {
+                //  create new process, create metadata
+                ImportObject io = new ImportObject();
+                String fileName = getImportFolder() + processTitle + ".xml";
 
-        //                if (!config.isUseOpac()) {
-        //                    ff = new MetsMods(prefs);
-        //                    digitalDocument = new DigitalDocument();
-        //                    ff.setDigitalDocument(digitalDocument);
-        //                    String publicationType = getConfig().getPublicationType();
-        //                    DocStructType logicalType = prefs.getDocStrctTypeByName(publicationType);
-        //                    logical = digitalDocument.createDocStruct(logicalType);
-        //                    digitalDocument.setLogicalDocStruct(logical);
-        //                    answer.add(io);
-        //                } else {
-        //                    try {
-        //                        if (StringUtils.isBlank(config.getIdentifierHeaderName())) {
-        //                            Helper.setFehlerMeldung("Cannot request catalogue, no identifier column defined");
-        //                            return Collections.emptyList();
-        //                        }
-        //
-        //                        String catalogueIdentifier = rowMap.get(headerOrder.get(config.getIdentifierHeaderName()));
-        //                        if (StringUtils.isBlank(catalogueIdentifier)) {
-        //                            continue;
-        //                        }
-        //                        ff = getRecordFromCatalogue(catalogueIdentifier);
-        //                        digitalDocument = ff.getDigitalDocument();
-        //                        logical = digitalDocument.getLogicalDocStruct();
-        //                        if (logical.getType().isAnchor()) {
-        //                            anchor = logical;
-        //                            logical = anchor.getAllChildren().get(0);
-        //                        }
-        //                        answer.add(io);
-        //                    } catch (ImportPluginException e) {
-        //                        log.error(e);
-        //                        io.setErrorMessage(e.getMessage());
-        //                        io.setImportReturnValue(ImportReturnValue.NoData);
-        //                        continue;
-        //                    }
-        //                }
+                try {
+                    Fileformat ff = new MetsMods(prefs);
+                    DigitalDocument digitalDocument = new DigitalDocument();
+                    ff.setDigitalDocument(digitalDocument);
 
-        //                DocStructType physicalType = prefs.getDocStrctTypeByName("BoundBook");
-        //                DocStruct physical = digitalDocument.createDocStruct(physicalType);
-        //                digitalDocument.setPhysicalDocStruct(physical);
-        //                Metadata imagePath = new Metadata(prefs.getMetadataTypeByName("pathimagefiles"));
-        //                imagePath.setValue("./images/");
-        //                physical.addMetadata(imagePath);
-        //
-        //                // add collections if configured
-        //                String col = getConfig().getCollection();
-        //                if (StringUtils.isNotBlank(col)) {
-        //                    Metadata mdColl = new Metadata(prefs.getMetadataTypeByName("singleDigCollection"));
-        //                    mdColl.setValue(col);
-        //                    logical.addMetadata(mdColl);
-        //                }
-        //                // and add all collections that where selected
-        //                for (String colItem : form.getDigitalCollections()) {
-        //                    if (!colItem.equals(col.trim())) {
-        //                        Metadata mdColl = new Metadata(prefs.getMetadataTypeByName("singleDigCollection"));
-        //                        mdColl.setValue(colItem);
-        //                        logical.addMetadata(mdColl);
-        //                    }
-        //                }
-        //                // create file name for mets file
-        //                String fileName = null;
-        //
-        //                // create importobject for massimport
-        //                io.setProcessTitle(record.getId());
-        //                io.setImportReturnValue(ImportReturnValue.ExportFinished);
-        //
-        //                for (MetadataMappingObject mmo : getConfig().getMetadataList()) {
-        //
-        //                    String value = rowMap.get(headerOrder.get(mmo.getHeaderName()));
-        //                    String identifier = null;
-        //                    if (mmo.getNormdataHeaderName() != null) {
-        //                        identifier = rowMap.get(headerOrder.get(mmo.getNormdataHeaderName()));
-        //                    }
-        //                    if (StringUtils.isNotBlank(mmo.getRulesetName()) && StringUtils.isNotBlank(value)) {
-        //                        try {
-        //                            Metadata md = new Metadata(prefs.getMetadataTypeByName(mmo.getRulesetName()));
-        //                            md.setValue(value);
-        //                            if (identifier != null) {
-        //                                md.setAutorityFile("gnd", "http://d-nb.info/gnd/", identifier);
-        //
-        //                            }
-        //                            if (anchor != null && "anchor".equals(mmo.getDocType())) {
-        //                                anchor.addMetadata(md);
-        //                            } else {
-        //                                logical.addMetadata(md);
-        //                            }
-        //                        } catch (MetadataTypeNotAllowedException e) {
-        //                            log.info(e);
-        //                            // Metadata is not known or not allowed
-        //                        }
-        //
-        //                        if (mmo.getRulesetName().equalsIgnoreCase("CatalogIDDigital") && !"anchor".equals(mmo.getDocType())) {
-        //                            fileName = getImportFolder() + File.separator + value + ".xml";
-        //                            io.setProcessTitle(value);
-        //                            io.setMetsFilename(fileName);
-        //                        }
-        //                    }
-        //
-        //                    if (StringUtils.isNotBlank(mmo.getPropertyName())) {
-        //                        Processproperty p = new Processproperty();
-        //                        p.setTitel(mmo.getPropertyName());
-        //                        p.setWert(value);
-        //                        io.getProcessProperties().add(p);
-        //                    }
-        //                }
-        //
-        //                for (PersonMappingObject mmo : getConfig().getPersonList()) {
-        //                    String firstname = "";
-        //                    String lastname = "";
-        //                    if (mmo.isSplitName()) {
-        //                        String name = rowMap.get(headerOrder.get(mmo.getHeaderName()));
-        //                        if (StringUtils.isNotBlank(name)) {
-        //                            if (name.contains(mmo.getSplitChar())) {
-        //                                if (mmo.isFirstNameIsFirst()) {
-        //                                    firstname = name.substring(0, name.lastIndexOf(mmo.getSplitChar()));
-        //                                    lastname = name.substring(name.lastIndexOf(mmo.getSplitChar()));
-        //                                } else {
-        //                                    lastname = name.substring(0, name.lastIndexOf(mmo.getSplitChar())).trim();
-        //                                    firstname = name.substring(name.lastIndexOf(mmo.getSplitChar()) + 1).trim();
-        //                                }
-        //                            } else {
-        //                                lastname = name;
-        //                            }
-        //                        }
-        //                    } else {
-        //                        firstname = rowMap.get(headerOrder.get(mmo.getFirstnameHeaderName()));
-        //                        lastname = rowMap.get(headerOrder.get(mmo.getLastnameHeaderName()));
-        //                    }
-        //
-        //                    String identifier = null;
-        //                    if (mmo.getNormdataHeaderName() != null) {
-        //                        identifier = rowMap.get(headerOrder.get(mmo.getNormdataHeaderName()));
-        //                    }
-        //                    if (StringUtils.isNotBlank(mmo.getRulesetName())) {
-        //                        try {
-        //                            Person p = new Person(prefs.getMetadataTypeByName(mmo.getRulesetName()));
-        //                            p.setFirstname(firstname);
-        //                            p.setLastname(lastname);
-        //
-        //                            if (identifier != null) {
-        //                                p.setAutorityFile("gnd", "http://d-nb.info/gnd/", identifier);
-        //                            }
-        //                            if (anchor != null && "anchor".equals(mmo.getDocType())) {
-        //                                anchor.addPerson(p);
-        //                            } else {
-        //                                logical.addPerson(p);
-        //                            }
-        //
-        //                            //                            logical.addPerson(p);
-        //                        } catch (MetadataTypeNotAllowedException e) {
-        //                            log.info(e);
-        //                            // Metadata is not known or not allowed
-        //                        }
-        //                    }
-        //                }
-        //
-        //                for (GroupMappingObject gmo : getConfig().getGroupList()) {
-        //                    try {
-        //                        MetadataGroup group = new MetadataGroup(prefs.getMetadataGroupTypeByName(gmo.getRulesetName()));
-        //                        for (MetadataMappingObject mmo : gmo.getMetadataList()) {
-        //                            String value = rowMap.get(headerOrder.get(mmo.getHeaderName()));
-        //                            Metadata md = new Metadata(prefs.getMetadataTypeByName(mmo.getRulesetName()));
-        //                            md.setValue(value);
-        //                            if (mmo.getNormdataHeaderName() != null) {
-        //                                md.setAutorityFile("gnd", "http://d-nb.info/gnd/", rowMap.get(headerOrder.get(mmo.getNormdataHeaderName())));
-        //                            }
-        //                            group.addMetadata(md);
-        //                        }
-        //                        for (PersonMappingObject pmo : gmo.getPersonList()) {
-        //                            Person p = new Person(prefs.getMetadataTypeByName(pmo.getRulesetName()));
-        //                            String firstname = "";
-        //                            String lastname = "";
-        //                            if (pmo.isSplitName()) {
-        //                                String name = rowMap.get(headerOrder.get(pmo.getHeaderName()));
-        //                                if (StringUtils.isNotBlank(name)) {
-        //                                    if (name.contains(pmo.getSplitChar())) {
-        //                                        if (pmo.isFirstNameIsFirst()) {
-        //                                            firstname = name.substring(0, name.lastIndexOf(pmo.getSplitChar()));
-        //                                            lastname = name.substring(name.lastIndexOf(pmo.getSplitChar()));
-        //                                        } else {
-        //                                            lastname = name.substring(0, name.lastIndexOf(pmo.getSplitChar()));
-        //                                            firstname = name.substring(name.lastIndexOf(pmo.getSplitChar()));
-        //                                        }
-        //                                    } else {
-        //                                        lastname = name;
-        //                                    }
-        //                                }
-        //                            } else {
-        //                                firstname = rowMap.get(headerOrder.get(pmo.getFirstnameHeaderName()));
-        //                                lastname = rowMap.get(headerOrder.get(pmo.getLastnameHeaderName()));
-        //                            }
-        //
-        //                            p.setFirstname(firstname);
-        //                            p.setLastname(lastname);
-        //
-        //                            if (pmo.getNormdataHeaderName() != null) {
-        //                                p.setAutorityFile("gnd", "http://d-nb.info/gnd/", rowMap.get(headerOrder.get(pmo.getNormdataHeaderName())));
-        //                            }
-        //                            group.addMetadata(p);
-        //                        }
-        //                        if (anchor != null && "anchor".equals(gmo.getDocType())) {
-        //                            anchor.addMetadataGroup(group);
-        //                        } else {
-        //                            logical.addMetadataGroup(group);
-        //                        }
-        //
-        //                        //                        logical.addMetadataGroup(group);
-        //
-        //                    } catch (MetadataTypeNotAllowedException e) {
-        //                        log.info(e);
-        //                        // Metadata is not known or not allowed
-        //                    }
-        //                }
-        //
-        //                // write mets file into import folder
-        //                ff.write(fileName);
-        //            } catch (WriteException | PreferencesException | MetadataTypeNotAllowedException | TypeNotAllowedForParentException e) {
-        //                io.setImportReturnValue(ImportReturnValue.WriteError);
-        //                io.setErrorMessage(e.getMessage());
-        //            }
+                    DocStruct logical = digitalDocument.createDocStruct(prefs.getDocStrctTypeByName(config.getAnchorDocType()));
+                    digitalDocument.setLogicalDocStruct(logical);
+                    DocStruct volume = digitalDocument.createDocStruct(prefs.getDocStrctTypeByName(config.getVolumeDocType()));
+                    logical.addChild(volume);
 
-        //        }
-        // end of all excel rows
+                    // add all anchor metadata
+                    for (String metadata : ipd.getAnchorMetadata().keySet()) {
+                        Metadata md = new Metadata(prefs.getMetadataTypeByName(metadata));
+                        md.setValue(ipd.getAnchorMetadata().get(metadata));
+                        logical.addMetadata(md);
+                    }
+
+                    // add all volume metadata
+                    for (String metadata : ipd.getVolumeMetadata().keySet()) {
+                        Metadata md = new Metadata(prefs.getMetadataTypeByName(metadata));
+                        md.setValue(ipd.getVolumeMetadata().get(metadata));
+                        volume.addMetadata(md);
+                    }
+                    String identifier;
+                    if (StringUtils.isBlank(ipd.getAnchorMetadata().get("ISSN"))) {
+                        identifier = String.valueOf(System.currentTimeMillis());
+                    } else {
+                        identifier = ipd.getAnchorMetadata().get("ISSN");
+                    }
+                    // create identifier
+                    Metadata anchorIdentifier = new Metadata(prefs.getMetadataTypeByName("CatalogIDDigital"));
+                    anchorIdentifier.setValue(identifier);
+                    logical.addMetadata(anchorIdentifier);
+                    Metadata volumeIdentifier = new Metadata(prefs.getMetadataTypeByName("CatalogIDDigital"));
+                    volumeIdentifier.setValue(identifier + "_" + ipd.getVolumeMetadata().get("PublicationYear"));
+                    volume.addMetadata(volumeIdentifier);
+
+                    // physical docstruct
+                    DocStructType physicalType = prefs.getDocStrctTypeByName("BoundBook");
+                    DocStruct physical = digitalDocument.createDocStruct(physicalType);
+                    digitalDocument.setPhysicalDocStruct(physical);
+                    Metadata imagePath = new Metadata(prefs.getMetadataTypeByName("pathimagefiles"));
+                    imagePath.setValue("./images/");
+                    physical.addMetadata(imagePath);
+
+                    // create issues and articles
+                    if (ipd.isCreateIssue()) {
+                        for (String issueNumber : ipd.getArticleMetadata().keySet()) {
+                            DocStruct issue = digitalDocument.createDocStruct(prefs.getDocStrctTypeByName(config.getIssueDocType()));
+                            volume.addChild(issue);
+                            Metadata md = new Metadata(prefs.getMetadataTypeByName("CurrentNo"));
+                            md.setValue(issueNumber);
+                            issue.addMetadata(md);
+                            addArticlesToDocstruct(issue, ipd.getArticleMetadata().get(issueNumber), digitalDocument);
+                        }
+                    } else {
+                        addArticlesToDocstruct(volume, ipd.getArticleMetadata().get("0"), digitalDocument);
+                    }
+
+                    io.setMetsFilename(fileName);
+                    io.setImportReturnValue(ImportReturnValue.ExportFinished);
+                    io.setProcessTitle(processTitle);
+                    ff.write(fileName);
+                } catch (UGHException | DocStructHasNoTypeException e) {
+                    log.error(e);
+                    io.setImportReturnValue(ImportReturnValue.InvalidData);
+                }
+
+                answer.add(io);
+
+                numberOfNewRecords = numberOfNewRecords + 1;
+            } else {
+                try {
+                    numberOfUpdatedRecords = numberOfUpdatedRecords + 1;
+                    prefs = process.getRegelsatz().getPreferences();
+                    Fileformat fileformat = process.readMetadataFile();
+                    // insert new metadata
+                    DocStruct anchor = fileformat.getDigitalDocument().getLogicalDocStruct();
+
+                    DocStruct volume = anchor.getAllChildren().get(0);
+                    if (!ipd.isCreateIssue()) {
+                        // insert new articles on volume
+                        // try to sort them based on value in 'Pages'
+
+                        addArticlesToDocstruct(volume, ipd.getArticleMetadata().get("0"), fileformat.getDigitalDocument());
+
+                    } else {
+                        for (Entry<String, List<Map<String, String>>> entry : ipd.getArticleMetadata().entrySet()) {
+                            DocStruct matchedIssue = null;
+                            String issueNumber = entry.getKey();
+                            int positionToInsert = 0;
+                            if (StringUtils.isNotBlank(issueNumber) && volume.getAllChildren() != null) {
+                                // try to find existing issue
+                                for (DocStruct currentIssue : volume.getAllChildren()) {
+                                    String issueNumberOfVolume = getMetadataValue(currentIssue, prefs, "CurrentNo");
+                                    if (issueNumber.equals(issueNumberOfVolume)) {
+                                        matchedIssue = currentIssue;
+                                        break;
+                                    }
+                                }
+
+                                // if this didn't exit, try to find correct position of new issue
+                                if (matchedIssue == null) {
+
+                                    int issueNumberOfCurrentIssue = Integer.parseInt(issueNumber.trim());
+                                    for (DocStruct currentIssue : volume.getAllChildren()) {
+                                        String issueNumberOfVolume = getMetadataValue(currentIssue, prefs, "CurrentNo");
+
+                                        if (StringUtils.isNumeric((issueNumberOfVolume))) {
+                                            int numberOfVolume = Integer.parseInt(issueNumberOfVolume.trim());
+                                            if (issueNumberOfCurrentIssue < numberOfVolume) {
+                                                positionToInsert = positionToInsert + 1;
+                                            } else {
+                                                break;
+                                            }
+
+                                        }
+                                    }
+
+                                    // if no existing issue was found, add new issue at the right position
+                                    matchedIssue = fileformat.getDigitalDocument().createDocStruct(prefs.getDocStrctTypeByName(config
+                                            .getIssueDocType()));
+                                    Metadata issueNumberMetadata = new Metadata(prefs.getMetadataTypeByName("CurrentNo"));
+                                    issueNumberMetadata.setValue(issueNumber);
+                                    matchedIssue.addMetadata(issueNumberMetadata);
+
+                                    List<DocStruct> docStructToMove = new ArrayList<>();
+
+                                    for (int i = 0; i < volume.getAllChildren().size(); i++) {
+                                        if (i > positionToInsert) {
+                                            DocStruct child = volume.getAllChildren().get(i);
+                                            docStructToMove.add(child);
+                                            volume.removeChild(child);
+                                        }
+                                    }
+                                    volume.addChild(matchedIssue);
+                                    for (DocStruct ds : docStructToMove) {
+                                        volume.addChild(ds);
+                                    }
+                                }
+                            } else {
+                                volume.addChild(matchedIssue);
+                            }
+                            addArticlesToDocstruct(matchedIssue, entry.getValue(), fileformat.getDigitalDocument());
+                        }
+                    }
+
+                    process.writeMetadataFile(fileformat);
+                } catch (TypeNotAllowedAsChildException | TypeNotAllowedForParentException | MetadataTypeNotAllowedException | ReadException
+                        | PreferencesException | WriteException | IOException | InterruptedException | SwapException | DAOException e) {
+                    log.error(e);
+                }
+            }
+
+        }
+
+        Helper.setMeldung("Created " + numberOfNewRecords + " new process(es) and updated " + numberOfUpdatedRecords + " process(es).");
+
         return answer;
+    }
+
+    /**
+     * Add a new articles to the given docstruct. Add all metadata from the list to each new article. If possible, try to find the correct order based
+     * on the value of the 'Pages' field
+     * 
+     * @param docstruct
+     * @param values
+     * @param digDoc
+     */
+
+    private void addArticlesToDocstruct(DocStruct docstruct, List<Map<String, String>> values, DigitalDocument digDoc) {
+
+        for (Map<String, String> articleMetadata : values) {
+            try {
+                // create docstruct and add metadata
+                String pageNumbers = articleMetadata.get("Pages");
+                DocStruct article = digDoc.createDocStruct(prefs.getDocStrctTypeByName(config.getArticleDocType()));
+                for (String metadataName : articleMetadata.keySet()) {
+                    if (metadataName.equals("Author") && StringUtils.isNotBlank(articleMetadata.get(metadataName))) {
+                        String[] splittedPersons = articleMetadata.get(metadataName).split(";");
+                        for (String personname : splittedPersons) {
+                            Person person = new Person(prefs.getMetadataTypeByName(metadataName));
+                            if (personname.contains(",")) {
+                                String lastname = personname.substring(0, personname.lastIndexOf(",")).trim();
+                                String firstname = personname.substring(personname.lastIndexOf(",") + 1).trim();
+                                person.setFirstname(firstname);
+                                person.setLastname(lastname);
+                            } else {
+                                person.setLastname(personname);
+                            }
+                            article.addPerson(person);
+                        }
+                    } else {
+                        Metadata md = new Metadata(prefs.getMetadataTypeByName(metadataName));
+                        md.setValue(articleMetadata.get(metadataName));
+                        article.addMetadata(md);
+                    }
+                }
+
+                // find correct position
+                pageNumbers = pageNumbers.replaceAll("\\D.*", "");
+                if (StringUtils.isNotBlank(pageNumbers) && docstruct.getAllChildren() != null) {
+                    int positionToInsert = 0;
+
+                    int startPageNoOfArticleToInsert = Integer.parseInt(pageNumbers);
+                    for (DocStruct currentIssue : docstruct.getAllChildren()) {
+                        String pageNoOfArticle = getMetadataValue(currentIssue, prefs, "Pages");
+                        if (pageNoOfArticle != null && StringUtils.isNotBlank(pageNoOfArticle.replaceAll("\\D.*", ""))) {
+                            int startPageNoOfCurrentArticle = Integer.parseInt(pageNumbers.replaceAll("\\D.*", ""));
+                            if (startPageNoOfArticleToInsert < startPageNoOfCurrentArticle) {
+                                positionToInsert = positionToInsert + 1;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    List<DocStruct> docStructToMove = new ArrayList<>();
+
+                    for (int i = 0; i < docstruct.getAllChildren().size(); i++) {
+                        if (i > positionToInsert) {
+                            DocStruct child = docstruct.getAllChildren().get(i);
+                            docStructToMove.add(child);
+                            docstruct.removeChild(child);
+                        }
+                    }
+                    docstruct.addChild(article);
+                    for (DocStruct ds : docStructToMove) {
+                        docstruct.addChild(ds);
+                    }
+
+                } else {
+                    // add new article to the end
+                    docstruct.addChild(article);
+                }
+
+            } catch (TypeNotAllowedAsChildException | MetadataTypeNotAllowedException | TypeNotAllowedForParentException e) {
+                log.error(e);
+                return;
+            }
+        }
+    }
+
+    /**
+     * get metadata value from a docstruct or return null if metadata doesn't exist
+     * 
+     * @param currentIssue
+     * @param prefs
+     * @param metadataName
+     * @return
+     */
+
+    private String getMetadataValue(DocStruct currentIssue, Prefs prefs, String metadataName) {
+        List<? extends Metadata> metadataList = currentIssue.getAllMetadataByType(prefs.getMetadataTypeByName(metadataName));
+        if (metadataList != null && !metadataList.isEmpty()) {
+            return metadataList.get(0).getValue();
+        }
+        return null;
     }
 
     public static void main(String[] args) {
@@ -342,9 +399,11 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
         System.out.println(records.size());
     }
 
-
     @Override
     public List<Record> generateRecordsFromFile() {
+        numberOfNewRecords = 0;
+        numberOfUpdatedRecords = 0;
+
         Map<String, ImportProcessData> metadataFromExcelfile = new HashMap<>();
         if (StringUtils.isBlank(workflowTitle)) {
             workflowTitle = form.getTemplate().getTitel();
@@ -487,12 +546,12 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
                         articleData = data.getArticleMetadata().get(map.get("Issue"));
                     }
                 }
-                // TODO only doctype child
+
                 Map<String, String> articleMetadata = new HashMap<>();
                 for (MetadataMappingObject mmo : config.getMetadataList()) {
                     String metadataValue = map.get(mmo.getHeaderName());
                     if (StringUtils.isBlank(mmo.getDocType()) || "child".equals(mmo.getDocType())) {
-                        articleMetadata.put(mmo.getPropertyName(), metadataValue);
+                        articleMetadata.put(mmo.getRulesetName(), metadataValue);
                     }
                 }
                 articleData.add(articleMetadata);
@@ -591,7 +650,7 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
 
     @Override
     public boolean isRunnableAsGoobiScript() {
-        return true;
+        return false;
     }
 
     /**
@@ -647,5 +706,13 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
         }
         String res = UghHelper.convertUmlaut(result.toString()).toLowerCase();
         return res.replaceAll("[\\W]", ""); // delete umlauts etc.
+    }
+
+    public static Iterable<MatchResult> findRegexMatches(String pattern, CharSequence s) {
+        List<MatchResult> results = new ArrayList<>();
+        for (Matcher m = Pattern.compile(pattern).matcher(s); m.find();) {
+            results.add(m.toMatchResult());
+        }
+        return results;
     }
 }

@@ -21,6 +21,11 @@ public class Config {
 
     private String processTitleRule;
 
+    private String anchorDocType;
+    private String volumeDocType;
+    private String issueDocType;
+    private String articleDocType;
+
     /**
      * loads the &lt;config&gt; block from xml file
      * 
@@ -36,6 +41,11 @@ public class Config {
         publicationTypeColumnName = xmlConfig.getString("/publicationType", null);
 
         processTitleRule = xmlConfig.getString("/processTitleGeneration", null);
+
+        anchorDocType = xmlConfig.getString("/anchorDocType", "Periodical");
+        volumeDocType = xmlConfig.getString("/volumeDocType", "PeriodicalVolume");
+        issueDocType = xmlConfig.getString("/issueDocType", "Issue");
+        articleDocType  = xmlConfig.getString("/articleDocType", "Article");
 
         @SuppressWarnings("unchecked")
         List<HierarchicalConfiguration> mml = xmlConfig.configurationsAt("//metadata");
