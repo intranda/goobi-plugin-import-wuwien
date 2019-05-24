@@ -5,6 +5,6 @@
 		<exec executable="mvn">
 			<arg value="package" />
 		</exec>
-		<copy file="target/plugin_intranda_import_wuwien.jar" todir="/opt/digiverso/goobi/plugins/import/"/>
+		<copy file="target/plugin_intranda_import_endnote.jar" todir="/opt/digiverso/goobi/plugins/import/"/>
 	</target>
 </project>
