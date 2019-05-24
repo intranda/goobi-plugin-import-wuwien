@@ -16,7 +16,6 @@ public class Config {
     private int identifierColumn;
     private List<MetadataMappingObject> metadataList = new ArrayList<>();
 
-    private String identifierHeaderName;
     private String publicationTypeColumnName;
 
     private String processTitleRule;
@@ -37,7 +36,6 @@ public class Config {
         publicationType = xmlConfig.getString("/publicationType", "Monograph");
         collection = xmlConfig.getString("/collection");
         identifierColumn = xmlConfig.getInt("/identifierColumn", 1);
-        identifierHeaderName = xmlConfig.getString("/identifierHeaderName", null);
         publicationTypeColumnName = xmlConfig.getString("/publicationType", null);
 
         processTitleRule = xmlConfig.getString("/processTitleGeneration", null);

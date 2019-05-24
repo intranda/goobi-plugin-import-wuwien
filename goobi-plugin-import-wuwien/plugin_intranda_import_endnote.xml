@@ -2,19 +2,15 @@
     <config>
         <!-- which workflow template shall be used -->
         <template>*</template>
- 
-        <identifierHeaderName>Key</identifierHeaderName>
-
+        <!-- process title generation rules -->
         <processTitleGeneration>TSL+'_'+ISSN+'_'+Volume</processTitleGeneration>
+        <!-- docstructs -->
         <anchorDocType>Periodical</anchorDocType>
         <volumeDocType>PeriodicalVolume</volumeDocType>
         <issueDocType>PeriodicalIssue</issueDocType>
         <articleDocType>Article</articleDocType>
-
-        <!-- which columns shall be mapped to which process property and to which ugh metadata column: defines the column number. The first column is 1 ugh: name of the metadata to use name: name of the property - if its missing or empty no property gets generated identifier: column where the gnd data is stored
-        -->
+        <!-- metadata mapping -->
         <metadata ugh="CatalogIDDigital" headerName="Key" docType="child"/>
-<!--         <publicationType headerName="Item Type"/> -->
         <metadata ugh="PublicationYear" headerName="Publication Year" docType="volume"/>
         <metadata ugh="Author" headerName="Author" docType="child" /> 
         <metadata ugh="TitleDocMain" headerName="Title" docType="child"/>
