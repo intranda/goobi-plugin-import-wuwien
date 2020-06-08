@@ -14,7 +14,7 @@ Detail | Description
 --- | ---
 **Plugin identifier**       | intranda_import_endnote
 **Plugin type**             | Import plugin
-**Licence**                 | GPL 2.0 or newer  
+**Licence**                 | GPL 2.0 or newer
 **Documentation (German)**  | https://docs.goobi.io/goobi-workflow-plugins-de/import/intranda_import_endnote
 **Documentation (English)** | https://docs.goobi.io/goobi-workflow-plugins-en/import/intranda_import_endnote
 
