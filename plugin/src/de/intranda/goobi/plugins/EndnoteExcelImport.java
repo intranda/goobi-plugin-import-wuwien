@@ -47,7 +47,6 @@ import de.sub.goobi.config.ConfigurationHelper;
 import de.sub.goobi.forms.MassImportForm;
 import de.sub.goobi.helper.Helper;
 import de.sub.goobi.helper.UghHelper;
-import de.sub.goobi.helper.exceptions.DAOException;
 import de.sub.goobi.helper.exceptions.ImportPluginException;
 import de.sub.goobi.helper.exceptions.SwapException;
 import de.sub.goobi.persistence.managers.ProcessManager;
@@ -251,8 +250,8 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
                                     }
 
                                     // if no existing issue was found, add new issue at the right position
-                                    matchedIssue = fileformat.getDigitalDocument().createDocStruct(prefs.getDocStrctTypeByName(config
-                                            .getIssueDocType()));
+                                    matchedIssue =
+                                            fileformat.getDigitalDocument().createDocStruct(prefs.getDocStrctTypeByName(config.getIssueDocType()));
                                     Metadata issueNumberMetadata = new Metadata(prefs.getMetadataTypeByName("CurrentNo"));
                                     issueNumberMetadata.setValue(issueNumber);
                                     matchedIssue.addMetadata(issueNumberMetadata);
@@ -280,7 +279,7 @@ public class EndnoteExcelImport implements IImportPluginVersion2, IPlugin {
 
                     process.writeMetadataFile(fileformat);
                 } catch (TypeNotAllowedAsChildException | TypeNotAllowedForParentException | MetadataTypeNotAllowedException | ReadException
-                        | PreferencesException | WriteException | IOException | InterruptedException | SwapException | DAOException e) {
+                        | PreferencesException | WriteException | IOException | SwapException e) {
                     log.error(e);
                 }
             }
