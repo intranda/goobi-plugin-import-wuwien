@@ -31,6 +31,7 @@ Now it is checked whether an issue should be created. This is done on the basis 
 
 The article is then created and added to the issue or volume. If several articles exist, the sorting is done by specifying the start page from the `Pages` column.
 
+![Selection of the plugin for performing the import](screen1_en.png)
 
 ## Configuration
 The configuration is done via the configuration file `plugin_intranda_import_endnote.xml` and can be adapted during operation.

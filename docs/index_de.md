@@ -31,6 +31,7 @@ Nun wird geprüft, ob ein Heft erzeugt werden soll. Dies passiert auf Basis der 
 
 Anschließend wird der Artikel erzeugt und dem Heft oder Jahrgang hinzugefügt. Sofern mehrere Artikel existieren, passiert die Sortierung anhand der Angabe der Startseite aus der Spalte `Pages`.
 
+![Auswahl des Plugins zur Durchführung des Imports](screen1_de.png)
 
 ## Konfiguration
 Die Konfiguration erfolgt über die Konfigurationsdatei `plugin_intranda_import_endnote.xml` und kann im laufenden Betrieb angepasst werden.
