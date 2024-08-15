@@ -25,13 +25,14 @@ There is also a configuration file, which must be located at the following locat
 ## Overview and functionality
 To use the import, the mass import area must be opened in the process templates and the `intranda_import_endnote` plugin must be selected in the `File upload import` tab. An Excel file can then be uploaded and imported.
 
+![Selection of the plugin for performing the import](screen1_en.png)
+
 The import takes place line by line. For each line, the process title is generated from the configured fields and checked to see whether the volume already exists in Goobi. If this is not the case, the process is created again and the configured metadata for `anchor` and `volume` is imported.
 
 Now it is checked whether an issue should be created. This is done on the basis of the `Issue` column. If the field is empty, the article is appended directly to the year, otherwise the correct issue is searched for. If it does not exist yet, it will also be created. The sorting of the issues is based on the number of the `Issue` column.
 
 The article is then created and added to the issue or volume. If several articles exist, the sorting is done by specifying the start page from the `Pages` column.
 
-![Selection of the plugin for performing the import](screen1_en.png)
 
 ## Configuration
 The configuration is done via the configuration file `plugin_intranda_import_endnote.xml` and can be adapted during operation.
