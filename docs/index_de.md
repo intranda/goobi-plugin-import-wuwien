@@ -25,13 +25,14 @@ Daneben gibt es eine Konfigurationsdatei, die an folgender Stelle liegen muss:
 ## Überblick und Funktionsweise
 Um den Import zu nutzen, muss in den Produktionsvorlagen der Massenimport Bereich geöffnet werden und im Reiter `Dateiupload-Import` das Plugin `intranda_import_endnote` auswählen. Anschließend kann eine Excel Datei hochladen und importiert werden.
 
-Des Import erfolgt zeilenweise. Dabei wird für jede Zeile der Vorgangstitel aus den konfigurierten Feldern erzeugt und geprüft, ob der Jahrgang bereits in Goobi existiert. Ist dies nicht der Fall, wird der Vorgang neu angelegt und die konfigurierten Metadaten für `anchor` und `volume` importiert.
+![Auswahl des Plugins zur Durchführung des Imports](screen1_de.png)
+
+Der Import erfolgt zeilenweise. Dabei wird für jede Zeile der Vorgangstitel aus den konfigurierten Feldern erzeugt und geprüft, ob der Jahrgang bereits in Goobi existiert. Ist dies nicht der Fall, wird der Vorgang neu angelegt und die konfigurierten Metadaten für `anchor` und `volume` importiert.
 
 Nun wird geprüft, ob ein Heft erzeugt werden soll. Dies passiert auf Basis der Angabe der Spalte `Issue`. Wenn das Feld leer ist, wird der Artikel direkt an den Jahrgang angehängt, ansonsten wird nach dem richtigen Heft gesucht. Existiert es noch nicht, wird es ebenfalls erzeugt. Die Sortierung der Hefte basiert auf der Nummer der Spalte `Issue`.
 
 Anschließend wird der Artikel erzeugt und dem Heft oder Jahrgang hinzugefügt. Sofern mehrere Artikel existieren, passiert die Sortierung anhand der Angabe der Startseite aus der Spalte `Pages`.
 
-![Auswahl des Plugins zur Durchführung des Imports](screen1_de.png)
 
 ## Konfiguration
 Die Konfiguration erfolgt über die Konfigurationsdatei `plugin_intranda_import_endnote.xml` und kann im laufenden Betrieb angepasst werden.
