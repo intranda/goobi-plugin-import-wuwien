@@ -15,8 +15,8 @@ Detail                      | Description
 **Plugin identifier**       | intranda_import_endnote
 **Plugin type**             | import
 **Licence**                 | GPL 2.0 or newer
-**Documentation (German)**  | https://docs.goobi.io/workflow-plugins/v/eng/import/goobi-plugin-import-wuwien
-**Documentation (English)** | https://docs.goobi.io/workflow-plugins/v/ger/import/goobi-plugin-import-wuwien
+**Documentation (German)**  | https://docs.goobi.io/workflow-plugins/v/ger/import/goobi-plugin-import-wuwien
+**Documentation (English)** | https://docs.goobi.io/workflow-plugins/v/eng/import/goobi-plugin-import-wuwien
 
 ## Goobi details
 
