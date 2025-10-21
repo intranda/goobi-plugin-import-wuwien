@@ -3,6 +3,10 @@ title: Import für Zeitschriftenartikel aus einem Endnote Export
 identifier: intranda_import_endnote
 published: true
 description: Dies ist eine technische Dokumentation für das Plugin zum Import von Zeitungsartikeln inklusive Zusammenführung mit vorhandenen Prozessen.
+keywords:
+    - Goobi workflow
+    - Plugin
+    - Import Plugin
 ---
 ## Einführung
 Die vorliegende Dokumentation beschreibt die Installation, die Konfiguration und den Einsatz des Plugins zum Import von Zeitschriftenartikeln aus einer aus Endnote exportierten Excel Datei.
