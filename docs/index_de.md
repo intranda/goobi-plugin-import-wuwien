@@ -75,4 +75,4 @@ Das Element `<processTitleGeneration>` definiert die Regeln, mit denen der Vorga
 
 Die Elemente `<anchorDocType>`, `<volumeDocType>`, `<issueDocType>` und `<articleDocType>` definieren die Strukturelemente, die für die Elemente Zeitschrift, Jahrgang, Heft und Artikel verwendet werden sollen. Sie müssen im Regelsatz existieren.
 
-Anschließend folgt das Mapping der Metadaten. Hierzu dient das Element `<metadata>`. Darin sind drei Atrribute erlaubt, in `ugh` wird der Metadatenname aus dem Regelsatz hinterlegt, in `headerName` die Überschrift der Spalte aus der Excel Datei und in `docType` wird definiert, ob das Metadatum in Zeitschriftentitel (`anchor`), Jahrgang (`volume`) oder Artikel (`child`) hinzugefügt werden soll.
+Anschließend folgt das Mapping der Metadaten. Hierzu dient das Element `<metadata>`. Darin sind drei Attribute erlaubt, in `ugh` wird der Metadatenname aus dem Regelsatz hinterlegt, in `headerName` die Überschrift der Spalte aus der Excel Datei und in `docType` wird definiert, ob das Metadatum in Zeitschriftentitel (`anchor`), Jahrgang (`volume`) oder Artikel (`child`) hinzugefügt werden soll.
